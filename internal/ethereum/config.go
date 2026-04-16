@@ -49,6 +49,7 @@ const (
 	WebSocketsEnabled             = "ws.enabled"
 	MaxAsyncBlockFetchConcurrency = "maxAsyncBlockFetchConcurrency"
 	UseGetBlockReceipts           = "useGetBlockReceipts"
+	ConfigSignerURL               = "signer.url"
 )
 
 const (
@@ -90,6 +91,7 @@ func InitConfig(conf config.Section) {
 	conf.AddKnownKey(TraceTXForRevertReason, false)
 	conf.AddKnownKey(MaxAsyncBlockFetchConcurrency, 25)
 	conf.AddKnownKey(UseGetBlockReceipts, false /* likely consumers of this package will want to set this default to true */)
+	conf.AddKnownKey(ConfigSignerURL)
 
 	// FireFly Common default for retry enabled is false,
 	// but we want to enable it by default

@@ -43,6 +43,7 @@ import (
 type ethConnector struct {
 	backend                    rpcbackend.Backend
 	wsBackend                  rpcbackend.WebSocketRPCClient
+	signer                     rpcbackend.RPC
 	serializer                 *abi.Serializer
 	gasEstimationFactor        *big.Float
 	catchupPageSize            int64
@@ -125,6 +126,15 @@ func NewEthereumConnector(ctx context.Context, conf config.Section) (cc Connecto
 
 	if err != nil {
 		return nil, err
+	}
+
+	signerURL := conf.GetString(ConfigSignerURL)
+	if signerURL != "" {
+		signerClient := ffresty.NewWithConfig(ctx, ffresty.Config{
+			URL: signerURL,
+		})
+		c.signer = rpcbackend.NewRPCClient(signerClient)
+		log.L(ctx).Infof("External signer initialized with URL: %s", signerURL)
 	}
 
 	httpClient := ffresty.NewWithConfig(ctx, *httpConf)

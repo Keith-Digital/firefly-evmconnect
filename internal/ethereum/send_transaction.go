@@ -53,7 +53,30 @@ func (c *ethConnector) TransactionSend(ctx context.Context, req *ffcapi.Transact
 		if err != nil {
 			return nil, ffcapi.ErrorReasonInvalidInputs, err
 		}
-		rpcError = c.backend.CallRPC(ctx, &txHash, "eth_sendTransaction", tx)
+
+		if c.signer != nil {
+			// If we have an external signer, sign the transaction first
+			log.L(ctx).Debugf("Signing transaction with external signer for nonce %d", req.Nonce.Uint64())
+
+			// Build the sign-only parameters, adding the chainID if available
+			txMap := make(map[string]interface{})
+			txJSON, _ := json.Marshal(tx)
+			_ = json.Unmarshal(txJSON, &txMap)
+			if c.chainID != "" {
+				txMap["chainId"] = c.chainID
+			}
+
+			var signedRaw ethtypes.HexBytes0xPrefix
+			rpcError = c.signer.CallRPC(ctx, &signedRaw, "eth_signTransaction", txMap)
+			if rpcError != nil {
+				return nil, etherrors.MapError(etherrors.SendRPCMethods, rpcError.Error()), rpcError.Error()
+			}
+			// Now send it as a raw transaction
+			rpcError = c.backend.CallRPC(ctx, &txHash, "eth_sendRawTransaction", signedRaw)
+		} else {
+			// Otherwise, rely on the node to sign it
+			rpcError = c.backend.CallRPC(ctx, &txHash, "eth_sendTransaction", tx)
+		}
 	}
 
 	if rpcError == nil && len(txHash) != 32 {
